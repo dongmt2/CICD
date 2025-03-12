@@ -1,107 +1,65 @@
+name: CI/CD Pipeline
 
-	<!-- owl carousel libraries cho hình nhỏ -->
-	<link rel="stylesheet" href="js/owlcarousel/owl.carousel.min.css">
-	<link rel="stylesheet" href="js/owlcarousel/owl.theme.default.min.css">
-	<script src="js/Jquery/Jquery.min.js"></script>
-    <script src="js/owlcarousel/owl.carousel.min.js"></script>
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
-    <!-- our files -->
-    <!-- css -->
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/topnav.css">
-    <link rel="stylesheet" href="css/header.css">
-    <link rel="stylesheet" href="css/taikhoan.css">
-    <link rel="stylesheet" href="css/trangchu.css">
-    <link rel="stylesheet" href="css/home_products.css">
-    <link rel="stylesheet" href="css/chitietsanpham.css">
-    <link rel="stylesheet" href="css/footer.css">
-    <!-- js -->
-    <script src="data/products.js"></script>
-    <script src="js/classes.js"></script>
-    <script src="js/dungchung.js"></script>
-    <script src="js/chitietsanpham.js"></script>
-</head>
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout mã nguồn
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-<body>
+      # Build Docker image
+      - name: Build Docker image
+        run: docker build -t my-web-app .
 
-    <script> addTopNav(); </script>
+      # Test application
+      - name: Test application
+        id: app-test
+        run: |
+          docker run -d -p 8080:80 --name test-container my-web-app
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "Application is running correctly."
+          else
+            echo "Application test failed with status $STATUS."
+            exit 1
+          fi
+          docker stop test-container
+          docker rm test-container
 
-    <section>
-        <script> addHeader(); </script>
+      # Scan image with Trivy
+      - name: Scan image with Trivy
+        if: steps.app-test.outcome == 'success'
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --exit-code 1 --severity CRITICAL my-web-app
 
-        <div id="productNotFound" style="min-height: 50vh; text-align: center; margin: 50px; display: none;">
-            <h1 style="color: red; margin-bottom: 10px;">Không tìm thấy sản phẩm</h1>
-            <a href="index.html" style="text-decoration: underline;">Quay lại trang chủ</a>
-        </div>
+      # Login to Docker Hub
+      - name: Login to Docker Hub
+        if: steps.app-test.outcome == 'success'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-        <div class="chitietSanpham" style="margin-bottom: 100px">
-            <h1>Điện thoại </h1>
-            <div class="rating"></div>
-            <div class="rowdetail group">
-                <div class="picture">
-                    <img src="" onclick="opencertain()">
-                </div>
-                <div class="price_sale">
-                    <div class="area_price"> </div>
-                    <div class="ship" style="display: none;">
-                        <img src="img/chitietsanpham/clock-152067_960_720.png">
-                        <div>NHẬN HÀNG TRONG 1 GIỜ</div>
-                    </div>
-                    <div class="area_promo">
-                        <strong>khuyến mãi</strong>
-                        <div class="promo">
-                            <img src="img/chitietsanpham/icon-tick.png">
-                            <div id="detailPromo"> </div>
-                        </div>
-                    </div>
-                    <div class="policy">
-                        <div>
-                            <img src="img/chitietsanpham/box.png">
-                            <p>Trong hộp có: Sạc, Tai nghe, Sách hướng dẫn, Cây lấy sim, Ốp lưng </p>
-                        </div>
-                        <div>
-                            <img src="img/chitietsanpham/icon-baohanh.png">
-                            <p>Bảo hành chính hãng 12 tháng.</p>
-                        </div>
-                        <div class="last">
-                            <img src="img/chitietsanpham/1-1.jpg">
-                            <p>1 đổi 1 trong 1 tháng nếu lỗi, đổi sản phẩm tại nhà trong 1 ngày.</p>
-                        </div>
-                    </div>
-                    <div class="area_order">
-                        <!-- nameProduct là biến toàn cục được khởi tạo giá trị trong phanTich_URL_chiTietSanPham -->
-                        <a class="buy_now" onclick="themVaoGioHang(maProduct, nameProduct);">
-                            <b><i class="fa fa-cart-plus"></i> Thêm vào giỏ hàng</b>
-                            <p>Giao trong 1 giờ hoặc nhận tại cửa hàng</p>
-                        </a>
-                    </div>
-                </div>
-                <div class="info_product">
-                    <h2>Thông số kỹ thuật</h2>
-                    <ul class="info">
-                    </ul>
-                </div>
-            </div>
-            <div id="overlaycertainimg" class="overlaycertainimg">
-                <div class="close" onclick="closecertain()">&times;</div>
-                <div class="overlaycertainimg-content">
-                    <img id="bigimg" class="bigimg" src="img/chitietsanpham/oppo-f9-red-2-400x460.png">
-                    <div class="div_smallimg owl-carousel">
-                        <!-- <img src="img/chitietsanpham/oppo-f9-mau-do-1-org.jpg" onclick="changepic(this.src)">
-                        <img src="img/chitietsanpham/oppo-f9-mau-do-2-org.jpg" onclick="changepic(this.src)">
-                        <img src="img/chitietsanpham/oppo-f9-mau-do-3-org.jpg" onclick="changepic(this.src)"> -->
-                    </div>
-                </div>
-            </div>
-        </div>
+      # Push image to Docker Hub
+      - name: Push image to Docker Hub
+        if: steps.app-test.outcome == 'success'
+        run: |
+          docker tag my-web-app <your-dockerhub-username>/my-web-app:latest
+          docker push <your-dockerhub-username>/my-web-app:latest
 
-        <div id="goiYSanPham"></div>
-    </section>
-
-    <script>addContainTaiKhoan();</script>
-
-    <div class="footer"><script>addFooter();</script></div>
-
-</body>
-
-</html>
+      # Tag current image as previous
+      - name: Tag current image as previous
+        if: steps.app-test.outcome == 'success'
+        run: |
+          docker tag my-web-app dongmt2/my-web-app:previous
+          docker push dongmt2/my-web-app:previous
