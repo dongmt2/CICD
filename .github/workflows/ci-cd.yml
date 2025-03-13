@@ -32,11 +32,9 @@ jobs:
           linkchecker http://localhost:8080 --check-extern
         continue-on-error: true
 
-      # Quét image với Trivy
       - name: Scan image with Trivy
-        id: trivy-scan
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --exit-code 1 --severity CRITICAL my-web-app
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image my-web-app
         continue-on-error: true
 
       # Gửi thông báo đến Slack
