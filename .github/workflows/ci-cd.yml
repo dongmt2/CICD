@@ -37,7 +37,7 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image my-web-app
         continue-on-error: true
       
-      # Gửi thông báo đến Slack
+      # Đọc và chuẩn bị báo cáo Trivy
       - name: Prepare Trivy report
         id: trivy-report
         run: |
@@ -52,6 +52,16 @@ jobs:
             echo "Trivy report not found."
           fi
         continue-on-error: true
+      # Gửi thông báo đến Slack
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.18.0
+        with:
+          payload: |
+            {
+              "text": "Pipeline result:\nTrivy scan: ${{ steps.trivy-scan.outcome }}\n${{ steps.trivy-report.outputs.stdout }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       # Login vào Docker Hub (chỉ nếu không có lỗi)
       - name: Login to Docker Hub
