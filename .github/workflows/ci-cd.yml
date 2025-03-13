@@ -35,15 +35,18 @@ jobs:
       - name: Scan image with Trivy
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image my-web-app
+          echo "scan_result<<EOF" >> $GITHUB_OUTPUT
+          cat trivy_output.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
         continue-on-error: true
-
+      
       # Gửi thông báo đến Slack
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.18.0
         with:
           payload: |
             {
-              "text": "Pipeline result:\nWeb test: ${{ steps.web-test.outcome }}\nTrivy scan: ${{ steps.trivy-scan.outcome }}\n${{ (steps.web-test.outcome == 'success' && steps.trivy-scan.outcome == 'success') && 'Proceeding to push image.' || 'Stopping pipeline due to errors. Keeping previous version.' }}"
+              "text": "Pipeline result:\nWeb test: ${{ steps.web-test.outcome }}\nTrivy scan: ${{ steps.trivy-scan.outcome }}\nTrivy errors:\n${{ steps.trivy-scan.outputs.scan_result }}\n${{ (steps.web-test.outcome == 'success' && steps.trivy-scan.outcome == 'success') && 'Proceeding to push image.' || 'Stopping pipeline due to errors.' }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
